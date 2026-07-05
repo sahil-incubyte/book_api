@@ -43,3 +43,10 @@ end
 
 
 gem "graphql", "~> 2.6"
+
+group :development do
+  # GraphiQL in-browser IDE for testing the GraphQL endpoint.
+  # sprockets-rails is required because this is an API-only app.
+  gem "graphiql-rails"
+  gem "sprockets-rails"
+end
