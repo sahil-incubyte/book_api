@@ -10,17 +10,8 @@ module Types
       context.schema.object_from_id(id, context)
     end
 
-    field :books, [ Types::BookType ], null: false
-    def books
-      Book.all
-    end
-
-    field :book, Types::BookType do
-      argument :id, ID, required: true
-    end
-    def book(id:)
-      Book.find(id)
-    end
+    field :books, resolver: Resolvers::BooksResolver
+    field :book, resolver: Resolvers::BookResolver
 
     field :nodes, [ Types::NodeType, null: true ], null: true, description: "Fetches a list of objects given a list of IDs." do
       argument :ids, [ ID ], required: true, description: "IDs of the objects."
