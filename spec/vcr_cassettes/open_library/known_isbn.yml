@@ -1,0 +1,26 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://openlibrary.org/api/books?bibkeys=ISBN%3A0451526538&format=json&jscmd=data
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v2.14.3
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Content-Type:
+      - application/json
+    body:
+      encoding: UTF-8
+      string: '{"ISBN:0451526538": {"title": "The Great Gatsby", "authors": [{"name":
+        "F. Scott Fitzgerald", "url": "https://openlibrary.org/authors/OL27349A/F._Scott_Fitzgerald"}],
+        "publish_date": "2004", "number_of_pages": 180}}'
+    http_version: '1.1'
+  recorded_at: Wed, 01 Jan 2025 00:00:00 GMT
+recorded_with: VCR 6.4.0
