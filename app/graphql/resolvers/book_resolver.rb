@@ -5,7 +5,8 @@ module Resolvers
     argument :id, ID, required: true
 
     def resolve(id:)
-      Book.find(id)
+      Book.find_by(id: id) ||
+        raise(GraphQL::ExecutionError, "Book with id #{id} not found")
     end
   end
 end
