@@ -31,3 +31,9 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+# Ignore SimpleCov coverage reports.
+/coverage/
+
+# Ignore RSpec run-state (only-failures) file.
+/spec/examples.txt

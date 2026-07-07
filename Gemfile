@@ -38,11 +38,28 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  # Testing framework and test-data helpers.
+  gem "rspec-rails"
+  gem "factory_bot_rails"
+  gem "faker"
 end
 
-
+group :test do
+  # Code coverage measurement/gate.
+  gem "simplecov", require: false
+  # Record & replay external HTTP interactions.
+  gem "vcr"
+  gem "webmock"
+end
 
 gem "graphql", "~> 2.6"
+
+# HTTP client for external API service classes.
+gem "faraday"
+
+# Catch unsafe database migrations before they run.
+gem "strong_migrations"
 
 group :development do
   # GraphiQL in-browser IDE for testing the GraphQL endpoint.
