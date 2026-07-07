@@ -34,3 +34,6 @@
 
 # Ignore SimpleCov coverage reports.
 /coverage/
+
+# Ignore RSpec run-state (only-failures) file.
+/spec/examples.txt
