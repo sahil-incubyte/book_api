@@ -3,11 +3,11 @@
     {
       "warning_type": "Unmaintained Dependency",
       "warning_code": 121,
-      "fingerprint": "21ab0fe00fdd5899ffc405cff75aadb91b805ee996a614f7e27b08a287e9062d",
+      "fingerprint": "98b26f60d776fd41ee6f088c833725145be9aac2d7c5b33780241c273622db42",
       "check_name": "EOLRails",
       "message": "Support for Rails 7.2.3.1 ends on 2026-08-09",
       "file": "Gemfile.lock",
-      "line": 376,
+      "line": 458,
       "link": "https://brakemanscanner.org/docs/warning_types/unmaintained_dependency/",
       "code": null,
       "render_path": null,

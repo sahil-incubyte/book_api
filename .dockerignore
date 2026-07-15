@@ -34,6 +34,9 @@
 # Ignore CI service files.
 /.github
 
+# Ignore test coverage output.
+/coverage
+
 # Ignore development files
 /.devcontainer
 

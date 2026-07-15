@@ -1,0 +1,56 @@
+# syntax = docker/dockerfile:1
+#
+# Development image for the Book API (multi-stage, size-optimized).
+#
+# Why multi-stage even for dev?
+#   The compiler toolchain (build-essential, libpq-dev) is only needed to
+#   *build* native gems like `pg`, not to *run* them. We compile gems in a
+#   throw-away `build` stage, then ship a final stage that keeps only the
+#   runtime libraries + the already-compiled bundle. Cuts several hundred MB.
+#
+# Tradeoff: the final image has no C compiler. If you add a NEW native gem,
+# rebuild the image (`docker compose build`) rather than `bundle install`
+# inside the running container.
+#
+# Make sure RUBY_VERSION matches .ruby-version
+ARG RUBY_VERSION=3.3.0
+
+# ---- base: runtime-only libraries, shared by build and final stages ----
+FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
+WORKDIR /rails
+ENV BUNDLE_PATH="/usr/local/bundle"
+
+# Runtime deps only:
+#   postgresql-client -> pulls libpq5 (needed by pg at runtime) + psql for debugging
+#   libvips           -> Active Storage image processing
+#   curl              -> container healthchecks / debugging
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y postgresql-client libvips curl && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# ---- build: toolchain + compiled gems (discarded from final image) ----
+FROM base AS build
+
+# Build deps needed to compile native gem extensions (e.g. pg).
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git pkg-config libpq-dev && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Install ALL gem groups (development + test). Cached until the Gemfile changes.
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# ---- final: runtime base + copied bundle, no toolchain ----
+FROM base
+
+# Bring in the gems compiled in the build stage.
+COPY --from=build /usr/local/bundle /usr/local/bundle
+
+# App source is bind-mounted at runtime via docker-compose; this COPY is a
+# fallback so the image is runnable on its own.
+COPY . .
+
+EXPOSE 3000
+
+# Remove any stale server pid, then boot Puma bound to all interfaces.
+CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 3000"]
