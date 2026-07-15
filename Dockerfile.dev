@@ -1,0 +1,43 @@
+# syntax = docker/dockerfile:1
+#
+# Development image for the Book API.
+#
+# Unlike the production `Dockerfile` (multi-stage, slim, non-root), this image
+# is optimized for a fast edit/reload loop:
+#   - keeps the compiler toolchain so native gems build on the fly
+#   - installs ALL gem groups (development + test)
+#   - source code is bind-mounted at runtime via docker-compose, so we don't
+#     COPY the whole app here (only the Gemfile, to cache `bundle install`)
+#
+# Make sure RUBY_VERSION matches .ruby-version
+ARG RUBY_VERSION=3.3.0
+FROM docker.io/library/ruby:$RUBY_VERSION-slim
+
+# Rails app lives here
+WORKDIR /rails
+
+# System packages:
+#   build-essential + libpq-dev -> compile the `pg` native extension
+#   postgresql-client           -> `pg_isready`, `psql` for debugging
+#   git, pkg-config             -> some gems need them at install time
+#   libvips                     -> Active Storage image processing
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential git pkg-config \
+      libpq-dev postgresql-client libvips curl && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Install gems first so this layer is cached until the Gemfile changes.
+# Gems are stored on a named volume in docker-compose, so they survive rebuilds.
+ENV BUNDLE_PATH="/usr/local/bundle"
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# The rest of the code is mounted at runtime (see docker-compose.yml).
+COPY . .
+
+EXPOSE 3000
+
+# Remove any stale server pid, then boot Puma bound to all interfaces so the
+# host can reach it. Migrations are run by the compose `command`/entrypoint.
+CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec rails server -b 0.0.0.0 -p 3000"]

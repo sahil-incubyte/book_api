@@ -1,0 +1,57 @@
+# Development environment: Rails API + PostgreSQL.
+#
+# Usage:
+#   cp .env.example .env     # first time only
+#   docker compose up --build
+#
+# Services talk to each other over the default Compose network by service name,
+# so Rails reaches Postgres at host "db" (see DATABASE_HOST in .env).
+
+services:
+  db:
+    image: postgres:16-alpine
+    # Values come from .env so the same names are used by Rails' database.yml.
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Named volume -> database survives `docker compose down` / rebuilds.
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      # Exposed so you can connect with a local GUI/psql if you want.
+      - "5432:5432"
+    healthcheck:
+      # web waits until Postgres actually accepts connections, not just boots.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # Load all POSTGRES_* / RAILS_* variables from .env.
+    env_file: .env
+    volumes:
+      # Bind mount: local source is live inside the container (edit -> reload).
+      - .:/rails
+      # Named volume: keep installed gems out of the bind mount so they persist
+      # and aren't shadowed by the host directory.
+      - bundle_cache:/usr/local/bundle
+    ports:
+      # Host port is configurable (set WEB_PORT to avoid clashes); container is 3000.
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Prepare the DB (create + migrate) on every boot, then start Puma.
+    command: >
+      bash -c "rm -f tmp/pids/server.pid &&
+               bundle exec rails db:prepare &&
+               bundle exec rails server -b 0.0.0.0 -p 3000"
+
+volumes:
+  pg_data:
+  bundle_cache:
