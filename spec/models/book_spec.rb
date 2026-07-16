@@ -36,4 +36,45 @@ RSpec.describe Book, type: :model do
       expect(build(:book, price: 0)).to be_valid
     end
   end
+
+  describe "cache invalidation" do
+    # The test environment uses :null_store, so swap in a real in-memory store
+    # for these examples to observe entries actually being dropped.
+    around do |example|
+      original = Rails.cache
+      Rails.cache = ActiveSupport::Cache::MemoryStore.new
+      example.run
+      Rails.cache = original
+    end
+
+    it "clears the cached list when a book is created" do
+      Rails.cache.write("books/all", [ "stale" ])
+
+      create(:book)
+
+      expect(Rails.cache.read("books/all")).to be_nil
+    end
+
+    it "clears both the list and the per-id entry when a book is updated" do
+      book = create(:book)
+      Rails.cache.write("books/all", [ "stale" ])
+      Rails.cache.write("books/#{book.id}", "stale")
+
+      book.update!(title: "New Title")
+
+      expect(Rails.cache.read("books/all")).to be_nil
+      expect(Rails.cache.read("books/#{book.id}")).to be_nil
+    end
+
+    it "clears both the list and the per-id entry when a book is destroyed" do
+      book = create(:book)
+      Rails.cache.write("books/all", [ "stale" ])
+      Rails.cache.write("books/#{book.id}", "stale")
+
+      book.destroy!
+
+      expect(Rails.cache.read("books/all")).to be_nil
+      expect(Rails.cache.read("books/#{book.id}")).to be_nil
+    end
+  end
 end

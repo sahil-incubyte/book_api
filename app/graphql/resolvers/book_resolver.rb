@@ -12,7 +12,12 @@ module Resolvers
     # written to the cache, so a newly-created book isn't shadowed by a miss.
     def resolve(id:)
       book = Rails.cache.fetch("books/#{id}", skip_nil: true) { Book.find_by(id: id) }
-      book || raise(GraphQL::ExecutionError, "Book with id #{id} not found")
+      raise(GraphQL::ExecutionError, "Book with id #{id} not found") unless book
+
+      # Count this view in Redis (hash + trending sorted set). A cache hit still
+      # counts, so view tracking is independent of whether the DB was queried.
+      BookViewTracker.new.record_view(book.id)
+      book
     end
   end
 end
