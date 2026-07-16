@@ -11,8 +11,9 @@ class GraphqlController < ApplicationController
     query = params[:query]
     operation_name = params[:operationName]
     context = {
-      # Query context goes here, for example:
-      # current_user: current_user,
+      # The Redis-backed session, so resolvers can persist per-visitor state
+      # (e.g. recently-viewed books) across requests.
+      session: session
     }
     result = BookApiSchema.execute(query, variables: variables, context: context, operation_name: operation_name)
     render json: result
