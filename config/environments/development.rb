@@ -20,8 +20,18 @@ Rails.application.configure do
   # Enable/disable caching. By default caching is disabled.
   # Run rails dev:cache to toggle caching.
   if Rails.root.join("tmp/caching-dev.txt").exist?
-    config.cache_store = :memory_store
     config.public_file_server.headers = { "Cache-Control" => "public, max-age=#{2.days.to_i}" }
+
+    # Back the cache with Redis so caching behaves like production in dev.
+    config.cache_store = :redis_cache_store, {
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"),
+      namespace: "book_api:cache",
+      # Don't blow up a request if Redis is momentarily unreachable — treat a
+      # connection error as a cache miss and fall through to the database.
+      error_handler: ->(method:, returning:, exception:) {
+        Rails.logger.error("[cache] #{method} failed: #{exception.class} #{exception.message}")
+      }
+    }
   else
     config.action_controller.perform_caching = false
 

@@ -12,6 +12,8 @@ module Types
 
     field :books, resolver: Resolvers::BooksResolver
     field :book, resolver: Resolvers::BookResolver
+    field :trending_books, resolver: Resolvers::TrendingBooksResolver
+    field :recently_viewed_books, resolver: Resolvers::RecentlyViewedBooksResolver
 
     field :nodes, [ Types::NodeType, null: true ], null: true, description: "Fetches a list of objects given a list of IDs." do
       argument :ids, [ ID ], required: true, description: "IDs of the objects."

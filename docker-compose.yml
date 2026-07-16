@@ -28,6 +28,23 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    # Persist to disk with append-only file so cached data survives restarts.
+    command: redis-server --appendonly yes
+    volumes:
+      # Named volume -> Redis data survives `docker compose down` / rebuilds.
+      - redis_data:/data
+    ports:
+      # Exposed so you can poke at it with redis-cli from the host if you want.
+      - "6379:6379"
+    healthcheck:
+      # web waits until Redis actually responds to PING, not just boots.
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   web:
     build:
       context: .
@@ -46,6 +63,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     # Prepare the DB (create + migrate) on every boot, then start Puma.
     command: >
       bash -c "rm -f tmp/pids/server.pid &&
@@ -55,3 +74,4 @@ services:
 volumes:
   pg_data:
   bundle_cache:
+  redis_data:

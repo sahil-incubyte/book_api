@@ -37,5 +37,23 @@ module BookApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Store sessions in Redis. API-only apps strip the cookie/session
+    # middleware, so we add them back explicitly. We use a dedicated
+    # RedisCacheStore (its own "book_api:session" namespace) rather than the
+    # global Rails cache, so session storage is Redis-backed in every
+    # environment and never collides with cached query data. The cookie only
+    # carries the session id; all session data lives in Redis and expires after
+    # 90 minutes of inactivity.
+    config.session_store :cache_store,
+      cache: ActiveSupport::Cache::RedisCacheStore.new(
+        url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"),
+        namespace: "book_api:session"
+      ),
+      key: "_book_api_session",
+      expire_after: 90.minutes
+
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use ActionDispatch::Session::CacheStore, config.session_options
   end
 end

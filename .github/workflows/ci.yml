@@ -55,6 +55,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y curl libjemalloc2 libvips libpq-dev postgresql-client
@@ -77,6 +87,8 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_TEST_DB: book_api_test
+          # Connect to the redis service container (mapped to localhost).
+          REDIS_URL: redis://localhost:6379/0
         run: |
           bin/rails db:test:prepare
           bundle exec rspec

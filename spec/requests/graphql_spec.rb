@@ -37,4 +37,39 @@ RSpec.describe "GraphQL endpoint", type: :request do
     expect(payload.dig("book", "title")).to eq("Dune")
     expect(Book.count).to eq(1)
   end
+
+  describe "Redis-backed sessions" do
+    def view_book(book)
+      post_graphql("query($id: ID!) { book(id: $id) { id } }", variables: { "id" => book.id.to_s })
+    end
+
+    def recently_viewed
+      post_graphql("query { recentlyViewedBooks { id } }")
+        .dig("data", "recentlyViewedBooks")
+        .map { |b| b["id"] }
+    end
+
+    it "remembers recently-viewed books across requests via the session cookie" do
+      dune = create(:book, title: "Dune")
+      neuromancer = create(:book, title: "Neuromancer")
+
+      # No session state yet.
+      expect(recently_viewed).to eq([])
+
+      # The integration session reuses the cookie set on the first response,
+      # so state persists across these separate HTTP requests.
+      view_book(dune)
+      expect(recently_viewed).to eq([ dune.id.to_s ])
+
+      view_book(neuromancer)
+      expect(recently_viewed).to eq([ neuromancer.id.to_s, dune.id.to_s ])
+
+      # Re-viewing moves a book back to the front without duplicating it.
+      view_book(dune)
+      expect(recently_viewed).to eq([ dune.id.to_s, neuromancer.id.to_s ])
+
+      # A session cookie was actually issued to carry the session id.
+      expect(response.headers["Set-Cookie"].to_s).to include("_book_api_session")
+    end
+  end
 end

@@ -60,8 +60,17 @@ Rails.application.configure do
   # want to log everything, set the level to "debug".
   config.log_level = ENV.fetch("RAILS_LOG_LEVEL", "info")
 
-  # Use a different cache store in production.
-  # config.cache_store = :mem_cache_store
+  # Back the cache with Redis (see the redis service in docker-compose.prod.yml).
+  config.cache_store = :redis_cache_store, {
+    url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"),
+    namespace: "book_api:cache",
+    # Reconnect a couple of times before giving up on a flaky connection.
+    reconnect_attempts: 2,
+    # A Redis blip should degrade to a cache miss, not a 500.
+    error_handler: ->(method:, returning:, exception:) {
+      Rails.logger.error("[cache] #{method} failed: #{exception.class} #{exception.message}")
+    }
+  }
 
   # Use a real queuing backend for Active Job (and separate queues per environment).
   # config.active_job.queue_adapter = :resque
