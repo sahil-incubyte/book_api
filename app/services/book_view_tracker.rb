@@ -30,7 +30,15 @@ class BookViewTracker
   end
 
   # Lifetime view count for a single book (0 if never viewed).
+  #
+  # NOTE (N+1): this issues ONE Redis HGET per call. When a GraphQL list field
+  # resolves `viewCount` for every book in a collection (e.g. `books { viewCount }`),
+  # this fires once per book — N books means N separate Redis round-trips. The log
+  # line below makes that fan-out visible: count the "[N+1] HGET book:views" lines
+  # for a single request and you'll see one per book. This is deliberately left
+  # un-batched; a single HMGET (or a GraphQL Dataloader) would collapse it to one call.
   def view_count(book_id)
+    Rails.logger.info("[N+1] HGET #{VIEWS_KEY} field=#{book_id}")
     with_redis(0) { |redis| redis.hget(VIEWS_KEY, book_id) }.to_i
   end
 
