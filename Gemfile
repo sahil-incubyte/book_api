@@ -12,7 +12,7 @@ gem "puma", ">= 5.0"
 # view-count / trending data-structure features.
 gem "redis", ">= 4.0.1"
 # connection_pool 3.x needs Ruby 3.4+ syntax; pin to 2.x for our Ruby 3.3.
-gem "connection_pool", "~> 2.5"
+gem "connection_pool", "~> 3.0"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
