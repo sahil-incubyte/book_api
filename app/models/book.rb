@@ -1,4 +1,9 @@
 class Book < ApplicationRecord
+  # Full-text search + analytics via Elasticsearch. This adds `.es_search`,
+  # `.es_facets`, and after_commit callbacks that keep the ES index in sync with
+  # the books table (see app/models/concerns/searchable.rb).
+  include Searchable
+
   has_many :reviews, dependent: :destroy
 
   validates :title, presence: true

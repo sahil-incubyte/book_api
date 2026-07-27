@@ -41,8 +41,19 @@ module Resolvers
 
     private
 
+    # A search term routes the whole query through Elasticsearch (full-text match
+    # plus price filter and sort). Without a term we stay on Postgres, which keeps
+    # the cache path and price/sort behaviour exactly as before.
     def queried_books(search, min_price, max_price, sort_by, sort_direction)
-      scope = Book.search(search)
+      if search.to_s.strip.present?
+        return Book.es_search(
+          search,
+          min_price: min_price, max_price: max_price,
+          sort_by: sort_by, sort_direction: sort_direction
+        )
+      end
+
+      scope = Book.all
       scope = scope.price_at_least(min_price) unless min_price.nil?
       scope = scope.price_at_most(max_price) unless max_price.nil?
       scope.sorted_by(sort_by, sort_direction).to_a

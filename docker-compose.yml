@@ -45,6 +45,31 @@ services:
       timeout: 5s
       retries: 5
 
+  elasticsearch:
+    image: elasticsearch:8.13.4
+    environment:
+      # Single-node cluster: no peer discovery, no replica shards needed.
+      discovery.type: single-node
+      # Dev only — turn off TLS/auth so Rails can talk plain HTTP on :9200.
+      # NEVER do this in production.
+      xpack.security.enabled: "false"
+      # Cap the JVM heap so ES doesn't try to grab half the host's RAM.
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes:
+      # Named volume -> index data survives `docker compose down` / rebuilds.
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      # Exposed on 9202 (not the default 9200) so this dev cluster never clashes
+      # with any other Elasticsearch/OpenSearch already bound to 9200 on the host.
+      # Inside the Compose network services still reach it at elasticsearch:9200.
+      - "9202:9200"
+    healthcheck:
+      # web waits until the cluster answers, not just until the JVM boots.
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   web:
     build:
       context: .
@@ -65,6 +90,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
     # Prepare the DB (create + migrate) on every boot, then start Puma.
     command: >
       bash -c "rm -f tmp/pids/server.pid &&
@@ -75,3 +102,4 @@ volumes:
   pg_data:
   bundle_cache:
   redis_data:
+  es_data:

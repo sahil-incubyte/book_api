@@ -58,9 +58,12 @@ RSpec.describe Resolvers::BooksResolver, type: :graphql do
       GQL
     end
 
-    it "returns only books matching the search term" do
-      create(:book, title: "Dune", author: "Frank Herbert", price: 10)
-      create(:book, title: "Neuromancer", author: "William Gibson", price: 10)
+    # An active search term routes through Elasticsearch, so this example indexes
+    # its data and needs a reachable cluster (see spec/support/elasticsearch.rb).
+    it "returns only books matching the search term", :elasticsearch do
+      dune = create(:book, title: "Dune", author: "Frank Herbert", price: 10)
+      neuromancer = create(:book, title: "Neuromancer", author: "William Gibson", price: 10)
+      index_books!(dune, neuromancer)
 
       result = execute_graphql(search_query, variables: { "search" => "dune" })
 
@@ -131,10 +134,11 @@ RSpec.describe Resolvers::BooksResolver, type: :graphql do
       expect(result.dig("data", "books")).to eq([])
     end
 
-    it "applies price bounds together with an active search via AND" do
-      create(:book, title: "Ruby Deep Dive", author: "Anon", price: 20)
-      create(:book, title: "Ruby Expensive Edition", author: "Anon", price: 500)
-      create(:book, title: "Python Basics", author: "Anon", price: 20)
+    it "applies price bounds together with an active search via AND", :elasticsearch do
+      deep_dive = create(:book, title: "Ruby Deep Dive", author: "Anon", price: 20)
+      expensive = create(:book, title: "Ruby Expensive Edition", author: "Anon", price: 500)
+      python = create(:book, title: "Python Basics", author: "Anon", price: 20)
+      index_books!(deep_dive, expensive, python)
 
       result = execute_graphql(price_query, variables: { "search" => "ruby", "maxPrice" => 100 })
 
@@ -227,11 +231,12 @@ RSpec.describe Resolvers::BooksResolver, type: :graphql do
       expect(result["data"]).to be_nil
     end
 
-    it "applies the sort to the set already narrowed by search and price (AND)" do
-      create(:book, title: "Ruby Mid", author: "Anon", price: 50)
-      create(:book, title: "Ruby Cheap", author: "Anon", price: 10)
-      create(:book, title: "Ruby Pricey", author: "Anon", price: 500)
-      create(:book, title: "Python Cheap", author: "Anon", price: 10)
+    it "applies the sort to the set already narrowed by search and price (AND)", :elasticsearch do
+      mid = create(:book, title: "Ruby Mid", author: "Anon", price: 50)
+      cheap = create(:book, title: "Ruby Cheap", author: "Anon", price: 10)
+      pricey = create(:book, title: "Ruby Pricey", author: "Anon", price: 500)
+      python = create(:book, title: "Python Cheap", author: "Anon", price: 10)
+      index_books!(mid, cheap, pricey, python)
 
       result = execute_graphql(
         sort_query,
@@ -349,9 +354,10 @@ RSpec.describe Resolvers::BooksResolver, type: :graphql do
       expect(Rails.cache.read("books/all")).not_to be_nil
     end
 
-    it "does not read the cache when a search is active" do
+    it "does not read the cache when a search is active", :elasticsearch do
       Rails.cache.write("books/all", [ Book.new(id: 999, title: "Cached Only", author: "Nobody", price: 1) ])
-      create(:book, title: "Dune", author: "Frank Herbert", price: 10)
+      dune = create(:book, title: "Dune", author: "Frank Herbert", price: 10)
+      index_books!(dune)
 
       result = execute_graphql(search_query, variables: { "search" => "dune" })
 
@@ -359,8 +365,9 @@ RSpec.describe Resolvers::BooksResolver, type: :graphql do
       expect(titles).to contain_exactly("Dune")
     end
 
-    it "does not populate the cache when a search is active" do
-      create(:book, title: "Dune", author: "Frank Herbert", price: 10)
+    it "does not populate the cache when a search is active", :elasticsearch do
+      dune = create(:book, title: "Dune", author: "Frank Herbert", price: 10)
+      index_books!(dune)
 
       execute_graphql(search_query, variables: { "search" => "dune" })
 

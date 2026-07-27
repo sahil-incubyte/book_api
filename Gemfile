@@ -55,6 +55,12 @@ end
 
 gem "graphql", "~> 2.6"
 
+# Elasticsearch integration: `elasticsearch-model` wires an AR model to an ES
+# index (mappings, callbacks, `.search`); `elasticsearch-rails` adds the
+# import/reindex rake tasks. The 8.x line targets an Elasticsearch 8.x cluster.
+gem "elasticsearch-model", "~> 8.0"
+gem "elasticsearch-rails", "~> 8.0"
+
 # HTTP client for external API service classes.
 gem "faraday"
 
